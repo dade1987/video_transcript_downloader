@@ -1,4 +1,4 @@
-# VideoTrasnscriptDownloader
+# VideoTranscriptDownloader
 
 ## Quick Start
 
