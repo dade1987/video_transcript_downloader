@@ -9,7 +9,9 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from youtube_transcript_api import YouTubeTranscriptApi
+
 from youtube_transcript_api.formatters import TextFormatter
+from youtube_transcript_api.formatters import JSONFormatter
 
 
 # YT Data Api v3
@@ -79,6 +81,25 @@ def Is_Short(video_id):
         return(True)
 
 
+def process_video(video, skip_shorts, language, formatter, file_name):
+    if skip_shorts and Is_Short(video):
+        print("Short Skipped")
+        print(video)
+        return
+
+    transcript = Get_Transcript_from_videoId(video, language)
+
+    if formatter == 'text':
+        formatter = JSONFormatter()
+    else:
+        formatter =TextFormatter()
+
+    txt_formatted = formatter.format_transcript(transcript)
+
+    with open(file_name, 'a', encoding='utf-8') as file:
+        file.write(txt_formatted)
+
+
 #main function
 def main():
     print("Get Transcripts From YT Channel (or Playlist)")
@@ -91,9 +112,11 @@ def main():
     isPlaylist=False
     videoList=[]
     skipShorts=True
+    formatter='json'
+    fileName='out.json'
 
     try:
-        opts,argv = getopt.getopt(argv, "c:m:l:p:s:", ["channel=","maxResults=","language=","isPlaylist=","skipShorts="])
+        opts,argv = getopt.getopt(argv, "c:m:l:p:s:f:o:", ["channel=","maxResults=","language=","isPlaylist=","skipShorts=","formatter=","fileName="])
         print("Args: ")
         print(opts)
 
@@ -108,14 +131,19 @@ def main():
                 isPlaylist = bool(v)
             elif o in ['-s','--skipShorts']:
                 skipShorts = bool(v)
+            elif o in ['-f','--formatter']:
+                formatter = v
+            elif o in ['-o','--fileName']:
+                fileName = v
 
     except Exception:
         traceback.print_exc()
-        print('Error: pass the arguments like -c <channelNameprint(isPlaylist)> -m <maxResults> -l <language> -p <isPlaylist>')
+        print('Error: pass the arguments like -c <channelNameprint(isPlaylist)> -m <maxResults> -l <language> -p <isPlaylist> -f <fileName>')
         print('MaxResults example: 10, 15, 30, etc... Default: 10')
         print('Language example: it, en, de, etc... Default: en')
         print('isPlaylist example: true|false Default: False')
         print('skipShorts example: true|false Default: True')
+        print('fileName example: output.json')
     
     if channel!=None:
         #print(isPlaylist)
@@ -134,20 +162,7 @@ def main():
             print(videoList)
 
             for video in videoList:
-                if(skipShorts==True):
-                    if (Is_Short(video) == False):
-                        transcript = Get_Transcript_from_videoId(video, language)
-                        formatter = TextFormatter()
-                        txt_formatted = formatter.format_transcript(transcript)
-                        print(txt_formatted)
-                    else:
-                        print("Short Skipped")
-                        print(video)    
-                else:
-                    transcript = Get_Transcript_from_videoId(video, language)
-                    formatter = TextFormatter()
-                    txt_formatted = formatter.format_transcript(transcript)
-                    print(txt_formatted)
+                process_video(video, skipShorts, language, formatter, fileName)
 
 if __name__ == "__main__":
     main()
