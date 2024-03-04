@@ -4,7 +4,7 @@
 
 - git clone REPO
 
-- pip install youtube_transcript_api
+- pip install -r requirements.txt
 
 - cp env.example .env
 
