@@ -32,7 +32,6 @@ def YT_ChannelID_From_Name(name):
 
     response = request.execute()
 
-
     ChannelID = response["items"][0]["id"]["channelId"]
     return(ChannelID)
 
@@ -53,8 +52,22 @@ def YT_Videos_from_channelID(id, maxResults):
         res.append(item["id"]["videoId"])
     return(res)
 
+def YT_Videos_from_playlistId(playlistId, maxResults):
+    request = youtube.playlistItems().list(
+        part="id,snippet",
+        maxResults=maxResults,
+        playlistId=playlistId
+    )
+
+    response = request.execute()
+    res = []
+
+    for item in response["items"]:
+        res.append(item['snippet']['resourceId']['videoId'])
+    
+    return(res)
+
 def Get_Transcript_from_videoId(video_id, language):
-    print(language)
     ts = YouTubeTranscriptApi.get_transcript(video_id, languages=[language])
     return(ts)
 
@@ -68,17 +81,20 @@ def Is_Short(video_id):
 
 #main function
 def main():
-    print("Get Transcripts From YT Channel")
+    print("Get Transcripts From YT Channel (or Playlist)")
     #lets fetch all the arguments from sys.argv except the script name
     argv = sys.argv[1:]
 
     channel=None
     maxResults='10'
     language='en'
+    isPlaylist=False
+    videoList=[]
+    skipShorts=True
 
     try:
-        opts,argv = getopt.getopt(argv, "c:m:l:", ["channel=","maxResults=","language="])
-        print("Argomenti: ")
+        opts,argv = getopt.getopt(argv, "c:m:l:p:s:", ["channel=","maxResults=","language=","isPlaylist=","skipShorts="])
+        print("Args: ")
         print(opts)
 
         for o,v in opts:
@@ -88,32 +104,50 @@ def main():
                 maxResults = v
             elif o in ['-l','--language']:
                 language = v
+            elif o in ['-p','--isPlaylist']:
+                isPlaylist = bool(v)
+            elif o in ['-s','--skipShorts']:
+                skipShorts = bool(v)
 
     except Exception:
         traceback.print_exc()
-        print('Error: pass the arguments like -c <channelName> -m <maxResults> -l <language>')
+        print('Error: pass the arguments like -c <channelNameprint(isPlaylist)> -m <maxResults> -l <language> -p <isPlaylist>')
         print('MaxResults example: 10, 15, 30, etc... Default: 10')
         print('Language example: it, en, de, etc... Default: en')
-
+        print('isPlaylist example: true|false Default: False')
+        print('skipShorts example: true|false Default: True')
+    
     if channel!=None:
-        print("Channel: " + channel)
-        print("Max Results: " + maxResults)
+        #print(isPlaylist)
+        if isPlaylist==True:
+            videoList = YT_Videos_from_playlistId(channel, maxResults)
+        elif isPlaylist==False:
+            print("Channel: " + channel)
+            print("Max Results: " + maxResults)
 
-        chId=YT_ChannelID_From_Name(channel)
+            chId=YT_ChannelID_From_Name(channel)
 
-        videoList = YT_Videos_from_channelID(chId, maxResults)
-        print("Video List:")
-        print(videoList)
+            videoList = YT_Videos_from_channelID(chId, maxResults)
 
-        for video in videoList:
-            if (Is_Short(video) == False):
-                transcript = Get_Transcript_from_videoId(video, language)
-                formatter = TextFormatter()
-                txt_formatted = formatter.format_transcript(transcript)
-                print(txt_formatted)
-            else:
-                print("Short Skipped")
-                print(video)
+        if(len(videoList) > 0):
+            print("Video List:")
+            print(videoList)
+
+            for video in videoList:
+                if(skipShorts==True):
+                    if (Is_Short(video) == False):
+                        transcript = Get_Transcript_from_videoId(video, language)
+                        formatter = TextFormatter()
+                        txt_formatted = formatter.format_transcript(transcript)
+                        print(txt_formatted)
+                    else:
+                        print("Short Skipped")
+                        print(video)    
+                else:
+                    transcript = Get_Transcript_from_videoId(video, language)
+                    formatter = TextFormatter()
+                    txt_formatted = formatter.format_transcript(transcript)
+                    print(txt_formatted)
 
 if __name__ == "__main__":
     main()
