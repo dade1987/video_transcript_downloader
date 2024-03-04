@@ -53,8 +53,9 @@ def YT_Videos_from_channelID(id, maxResults):
         res.append(item["id"]["videoId"])
     return(res)
 
-def Get_Transcript_from_videoId(video_id):
-    ts = YouTubeTranscriptApi.get_transcript(video_id)
+def Get_Transcript_from_videoId(video_id, language):
+    print(language)
+    ts = YouTubeTranscriptApi.get_transcript(video_id, languages=[language])
     return(ts)
 
 def Is_Short(video_id):
@@ -73,9 +74,10 @@ def main():
 
     channel=None
     maxResults='10'
+    language='en'
 
     try:
-        opts,argv = getopt.getopt(argv, "c:m:", ["channel=","maxResults="])
+        opts,argv = getopt.getopt(argv, "c:m:l:", ["channel=","maxResults=","language="])
         print("Argomenti: ")
         print(opts)
 
@@ -84,10 +86,14 @@ def main():
                 channel = v
             elif o in ['-m','--maxResults']:
                 maxResults = v
+            elif o in ['-l','--language']:
+                language = v
 
     except Exception:
         traceback.print_exc()
-        print('Error: pass the arguments like -c <channelName> -m <maxResults>')
+        print('Error: pass the arguments like -c <channelName> -m <maxResults> -l <language>')
+        print('MaxResults example: 10, 15, 30, etc... Default: 10')
+        print('Language example: it, en, de, etc... Default: en')
 
     if channel!=None:
         print("Channel: " + channel)
@@ -101,7 +107,7 @@ def main():
 
         for video in videoList:
             if (Is_Short(video) == False):
-                transcript = Get_Transcript_from_videoId(video)
+                transcript = Get_Transcript_from_videoId(video, language)
                 formatter = TextFormatter()
                 txt_formatted = formatter.format_transcript(transcript)
                 print(txt_formatted)
