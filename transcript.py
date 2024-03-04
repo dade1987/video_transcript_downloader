@@ -28,20 +28,31 @@ def YT_ChannelID_From_Name(youtube, name):
     return(ChannelID)
 
 def YT_Videos_from_channelID(youtube, id, maxResults):
-    request = youtube.search().list(
-        part="id,snippet",
-        type='video',
-        order='date',
-        channelId=id,
-        maxResults=maxResults
-    )
-    response = request.execute()
-    #print(response)
+    mres = int(maxResults)
     res = []
+    while len(res) != int(maxResults):
+        
+        request = youtube.search().list(
+            part="id,snippet",
+            type='video',
+            order='date',
+            channelId=id,
+            maxResults=mres
+        )
+        response = request.execute()
+        
 
-    for item in response["items"]:
-        #print(item["id"]["videoId"])
-        res.append(item["id"]["videoId"])
+        print("Response Items:",len(response["items"]))
+        for item in response["items"]:
+            print(item["id"]["videoId"])
+            if Is_Short(item["id"]["videoId"]) == True:
+                mres+=1
+                print("Skipped short")
+            else:
+                res.append(item["id"]["videoId"])
+                print("Added")
+        
+    
     return(res)
 
 def YT_Videos_from_playlistId(youtube,playlistId, maxResults):
