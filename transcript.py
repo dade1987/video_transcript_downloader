@@ -90,9 +90,9 @@ def process_video(video, skip_shorts, language, formatter, file_name):
     transcript = Get_Transcript_from_videoId(video, language)
 
     if formatter == 'text':
-        formatter = JSONFormatter()
+        formatter = TextFormatter()
     else:
-        formatter =TextFormatter()
+        formatter =JSONFormatter()
 
     txt_formatted = formatter.format_transcript(transcript)
 
@@ -143,6 +143,7 @@ def main():
         print('Language example: it, en, de, etc... Default: en')
         print('isPlaylist example: true|false Default: False')
         print('skipShorts example: true|false Default: True')
+        print('formatter example: json|text')
         print('fileName example: output.json')
     
     if channel!=None:
