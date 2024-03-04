@@ -2,9 +2,8 @@ import requests
 import getopt
 import sys
 from dotenv import load_dotenv
-load_dotenv()
 import os
-
+import traceback
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -14,16 +13,7 @@ from youtube_transcript_api.formatters import TextFormatter
 from youtube_transcript_api.formatters import JSONFormatter
 
 
-# YT Data Api v3
-GAPI_Key = os.getenv('GOOGLE_DATA_API_KEY') 
-
-youtube=build(
-    'youtube',
-    'v3',
-    developerKey=GAPI_Key
-    )
-
-def YT_ChannelID_From_Name(name):
+def YT_ChannelID_From_Name(youtube, name):
 
     request = youtube.search().list(
         part="id,snippet",
@@ -37,7 +27,7 @@ def YT_ChannelID_From_Name(name):
     ChannelID = response["items"][0]["id"]["channelId"]
     return(ChannelID)
 
-def YT_Videos_from_channelID(id, maxResults):
+def YT_Videos_from_channelID(youtube, id, maxResults):
     request = youtube.search().list(
         part="id,snippet",
         type='video',
@@ -54,7 +44,7 @@ def YT_Videos_from_channelID(id, maxResults):
         res.append(item["id"]["videoId"])
     return(res)
 
-def YT_Videos_from_playlistId(playlistId, maxResults):
+def YT_Videos_from_playlistId(youtube,playlistId, maxResults):
     request = youtube.playlistItems().list(
         part="id,snippet",
         maxResults=maxResults,
@@ -81,11 +71,12 @@ def Is_Short(video_id):
         return(True)
 
 
-def process_video(video, skip_shorts, language, formatter, file_name):
+def process_video(video, skip_shorts, language, formatter):
     if skip_shorts and Is_Short(video):
         print("Short Skipped")
         print(video)
-        return
+        #return -1 if skipped
+        return(-1)
 
     transcript = Get_Transcript_from_videoId(video, language)
 
@@ -95,13 +86,28 @@ def process_video(video, skip_shorts, language, formatter, file_name):
         formatter =JSONFormatter()
 
     txt_formatted = formatter.format_transcript(transcript)
+    return(txt_formatted)
 
-    with open(file_name, 'a', encoding='utf-8') as file:
-        file.write(txt_formatted)
 
 
 #main function
 def main():
+    load_dotenv()
+
+    # YT Data Api v3
+    GAPI_Key = os.getenv('GOOGLE_DATA_API_KEY') 
+
+    try:
+        youtube=build(
+            'youtube',
+            'v3',
+            developerKey=GAPI_Key
+        )
+    except HttpError as error:
+        print(error)
+        sys.exit(0)
+
+
     print("Get Transcripts From YT Channel (or Playlist)")
     #lets fetch all the arguments from sys.argv except the script name
     argv = sys.argv[1:]
@@ -149,21 +155,23 @@ def main():
     if channel!=None:
         #print(isPlaylist)
         if isPlaylist==True:
-            videoList = YT_Videos_from_playlistId(channel, maxResults)
+            videoList = YT_Videos_from_playlistId(youtube, channel, maxResults)
         elif isPlaylist==False:
             print("Channel: " + channel)
             print("Max Results: " + maxResults)
 
-            chId=YT_ChannelID_From_Name(channel)
+            chId=YT_ChannelID_From_Name(youtube, channel)
 
-            videoList = YT_Videos_from_channelID(chId, maxResults)
+            videoList = YT_Videos_from_channelID(youtube,chId, maxResults)
 
         if(len(videoList) > 0):
             print("Video List:")
             print(videoList)
 
             for video in videoList:
-                process_video(video, skipShorts, language, formatter, fileName)
-
+                txt = process_video(video, skipShorts, language, formatter)
+                if txt != -1:
+                    with open(fileName, 'a', encoding='utf-8') as file:
+                        file.write(txt)
 if __name__ == "__main__":
     main()
