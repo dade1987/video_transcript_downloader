@@ -28,9 +28,9 @@ def YT_ChannelID_From_Name(youtube, name):
     return(ChannelID)
 
 def YT_Videos_from_channelID(youtube, id, maxResults):
-    mres = int(maxResults)
+    mres = int(maxResults)+10
     res = []
-    while len(res) != int(maxResults):
+    while len(res) <= int(maxResults):
         
         request = youtube.search().list(
             part="id,snippet",
